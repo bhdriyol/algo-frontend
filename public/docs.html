@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgoScript 2.0 Dokümantasyonu</title>
+    <style>
+        :root { --bg-color: #1e1e1e; --sidebar-bg: #252526; --text-color: #d4d4d4; --accent-color: #007acc; --code-bg: #101010; --border-color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: 280px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 20px; overflow-y: auto; flex-shrink: 0; }
+        .sidebar h2 { margin-top: 0; color: #fff; font-size: 1.4rem; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px;}
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin-bottom: 5px; }
+        .sidebar a { color: #aaa; text-decoration: none; transition: 0.2s; display: block; padding: 8px 10px; border-radius: 4px; font-size: 0.9rem; }
+        .sidebar a:hover { color: #fff; background: #333; }
+        .sidebar a.active { color: #fff; background: var(--accent-color); font-weight: bold; }
+        
+        /* Content */
+        .content { flex: 1; padding: 40px; overflow-y: auto; max-width: 900px; margin: 0 auto; }
+        h1 { color: #fff; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; font-size: 2.2rem; margin-bottom: 20px; }
+        h2 { color: #00ff88; margin-top: 60px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; font-size: 1.6rem; }
+        h3 { color: #4ec9b0; margin-top: 35px; font-size: 1.3rem; font-family: 'Consolas', monospace; display: flex; align-items: center; }
+        p { line-height: 1.7; font-size: 1rem; color: #ccc; margin-bottom: 15px; }
+        
+        /* Code Blocks */
+        code { font-family: 'Consolas', 'Monaco', monospace; background-color: #2d2d2d; padding: 2px 6px; border-radius: 4px; color: #ce9178; font-size: 0.9rem; border: 1px solid #444; }
+        pre { background-color: var(--code-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        pre code { background: none; padding: 0; color: #dcdcdc; border: none; font-size: 0.95rem; }
+        
+        /* Syntax Highlighting */
+        .keyword { color: #569cd6; } .function { color: #dcdcaa; } .variable { color: #9cdcfe; } .comment { color: #6a9955; } .string { color: #ce9178; } .number { color: #b5cea8; }
+        
+        /* Badges */
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 10px; vertical-align: middle; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-new { background: rgba(46, 160, 67, 0.2); color: #58a6ff; border: 1px solid #3fb950; }
+        .param { color: #9cdcfe; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>AlgoScript <span style="font-size:0.8rem; color:#888; font-weight: normal;">v2.1</span></h2>
+        <ul>
+            <li><a href="#giris" class="active">Giriş ve Temeller</a></li>
+            <li><a href="#veri">Veri Değişkenleri</a></li>
+            <li><a href="#matematik">Matematiksel Fonksiyonlar</a></li>
+            <li><a href="#hafiza">Hafıza ve Geçmiş (History)</a></li>
+            <li><a href="#gorsel">Gelişmiş Görselleştirme</a></li>
+            <li><a href="#indikator">İndikatörler</a></li>
+            <li><a href="#islem">Alım / Satım Komutları</a></li>
+            <li><a href="#ornek">Örnek: Williams Vix Fix</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div id="giris">
+            <h1>AlgoScript Referansı</h1>
+            <p>AlgoScript, Python sözdizimi üzerine kurulu, finansal stratejiler geliştirmek için özelleştirilmiş yüksek seviyeli bir dildir. TradingView Pine Script mantığına benzer şekilde çalışır ancak Python gücünü kullanır.</p>
+        </div>
+
+        <div id="veri">
+            <h2>Veri Değişkenleri</h2>
+            <p>Her mum çubuğu (bar) için aşağıdaki değişkenlere otomatik erişiminiz vardır:</p>
+            <ul>
+                <li><code>close</code>: Kapanış fiyatı.</li>
+                <li><code>open</code>: Açılış fiyatı.</li>
+                <li><code>high</code>: En yüksek fiyat.</li>
+                <li><code>low</code>: En düşük fiyat.</li>
+                <li><code>volume</code>: İşlem hacmi.</li>
+            </ul>
+        </div>
+
+        <div id="matematik">
+            <h2>Matematiksel Fonksiyonlar <span class="badge badge-new">YENİ</span></h2>
+            <p>Belirli bir periyot boyunca (Rolling Window) hesaplama yaparlar.</p>
+
+            <h3>highest(<span class="param">"kaynak"</span>, <span class="param">periyot</span>)</h3>
+            <p>Belirtilen kaynağın son N periyottaki en yüksek değerini döner.</p>
+            <pre><code><span class="comment"># Son 50 mumun en yüksek kapanışı</span>
+<span class="variable">zirve</span> = <span class="function">highest</span>(<span class="string">"close"</span>, <span class="number">50</span>)</code></pre>
+
+            <h3>lowest(<span class="param">"kaynak"</span>, <span class="param">periyot</span>)</h3>
+            <p>Belirtilen kaynağın son N periyottaki en düşük değerini döner.</p>
+
+            <h3>stdev(<span class="param">"kaynak"</span>, <span class="param">periyot</span>)</h3>
+            <p>Standart sapma hesaplar. (Bollinger Bantları vb. için).</p>
+            <pre><code><span class="variable">sapma</span> = <span class="function">stdev</span>(<span class="string">"close"</span>, <span class="number">20</span>)</code></pre>
+        </div>
+
+        <div id="hafiza">
+            <h2>Hafıza ve Geçmiş (History) <span class="badge badge-new">ÖNEMLİ</span></h2>
+            <p>Pine Script'teki <code>variable[1]</code> mantığıdır. Kendi hesapladığınız özel değerleri saklayıp, sonraki mumlarda geçmişe dönük sorgulama yapabilirsiniz.</p>
+
+            <h3>store(<span class="param">"isim"</span>, <span class="param">değer</span>)</h3>
+            <p>Bir değişkeni hafızaya kaydeder. <code>highest</code>, <code>lowest</code>, <code>sma</code> gibi fonksiyonların bu değişken üzerinde çalışabilmesi için gereklidir.</p>
+            <pre><code><span class="comment"># Özel bir osilatör hesapla ve kaydet</span>
+<span class="variable">ozel_veri</span> = (<span class="variable">close</span> - <span class="variable">low</span>) / <span class="variable">high</span>
+<span class="function">store</span>(<span class="string">"ozel_veri"</span>, <span class="variable">ozel_veri</span>)</code></pre>
+            
+            <h3>history(<span class="param">"isim"</span>, <span class="param">geriye_bak</span>)</h3>
+            <p>Kaydettiğiniz (veya standart) verinin N bar önceki değerini getirir.</p>
+            <pre><code><span class="comment"># 1 bar önceki "ozel_veri" değeri</span>
+<span class="variable">dunku_veri</span> = <span class="function">history</span>(<span class="string">"ozel_veri"</span>, <span class="number">1</span>)
+
+<span class="keyword">if</span> <span class="variable">ozel_veri</span> > <span class="variable">dunku_veri</span>:
+    <span class="function">buy</span>()</code></pre>
+        </div>
+
+        <div id="gorsel">
+            <h2>Gelişmiş Görselleştirme <span class="badge badge-new">V2.0</span></h2>
+            
+            <h3>plot(<span class="param">"isim"</span>, <span class="param">değer</span>, <span class="param">"renk"</span>, <span class="param">"stil"</span>, <span class="param">"panel"</span>)</h3>
+            <p>Grafiğe veri çizer. Artık alt panel (lower) ve histogram desteği var.</p>
+            <ul>
+                <li><strong>stil:</strong> "line" (çizgi) veya "histogram" (çubuk).</li>
+                <li><strong>panel:</strong> "main" (fiyat üstü) veya "lower" (fiyat altı ayrı pencere).</li>
+            </ul>
+            <pre><code><span class="comment"># Fiyatın altına Histogram çiz</span>
+<span class="function">plot</span>(<span class="string">"Momentum"</span>, <span class="variable">deger</span>, <span class="string">"#FF0000"</span>, <span class="string">"histogram"</span>, <span class="string">"lower"</span>)</code></pre>
+
+            <h3>plot_shape(<span class="param">koşul</span>, <span class="param">"yazı"</span>, <span class="param">"renk"</span>, <span class="param">"şekil"</span>, <span class="param">"konum"</span>)</h3>
+            <p>Mumların altına veya üstüne sinyal işaretleri koyar.</p>
+            <ul>
+                <li><strong>konum:</strong> "above" (üst) veya "below" (alt).</li>
+                <li><strong>şekil:</strong> "circle", "arrowUp", "arrowDown".</li>
+            </ul>
+            <pre><code><span class="function">plot_shape</span>(<span class="keyword">True</span>, <span class="string">"DİP"</span>, <span class="string">"#00FF00"</span>, <span class="string">"arrowUp"</span>, <span class="string">"below"</span>)</code></pre>
+        </div>
+
+        <div id="indikator">
+            <h2>İndikatör Fonksiyonları</h2>
+            <ul>
+                <li><code>rsi(p)</code>: RSI değeri.</li>
+                <li><code>sma(p)</code>: Basit Hareketli Ortalama (Fiyat için).</li>
+                <li><code>sma("kaynak", p)</code>: Herhangi bir veri için ortalama (örn: <code>sma("rsi_val", 14)</code>).</li>
+                <li><code>supertrend(p, m)</code>: SuperTrend değeri.</li>
+            </ul>
+        </div>
+
+        <div id="islem">
+            <h2>İşlem Komutları</h2>
+            <ul>
+                <li><code>buy()</code>: Long pozisyon açar.</li>
+                <li><code>sell()</code>: Short pozisyon açar veya Long'u kapatır.</li>
+            </ul>
+        </div>
+
+        <div id="ornek">
+            <h2>Tam Örnek: Williams Vix Fix</h2>
+            <p>Aşağıdaki kod, AlgoScript'in tüm gelişmiş özelliklerini (hafıza, matematik, alt panel çizimi) kullanır.</p>
+            <pre><code><span class="comment"># --- HESAPLAMA ---</span>
+<span class="variable">pd</span> = <span class="number">22</span>
+<span class="variable">hc</span> = <span class="function">highest</span>(<span class="string">"close"</span>, <span class="variable">pd</span>)
+<span class="variable">wvf</span> = ((<span class="variable">hc</span> - <span class="variable">low</span>) / <span class="variable">hc</span>) * <span class="number">100</span>
+
+<span class="comment"># Diğer hesaplamalar için kaydet</span>
+<span class="function">store</span>(<span class="string">"wvf"</span>, <span class="variable">wvf</span>)
+
+<span class="comment"># --- BOLLINGER BANTLARI (WVF Üzerine) ---</span>
+<span class="variable">sDev</span> = <span class="number">2.0</span> * <span class="function">stdev</span>(<span class="string">"wvf"</span>, <span class="number">20</span>)
+<span class="variable">midLine</span> = <span class="function">sma</span>(<span class="string">"wvf"</span>, <span class="number">20</span>)
+<span class="variable">upperBand</span> = <span class="variable">midLine</span> + <span class="variable">sDev</span>
+
+<span class="comment"># --- ÇİZİMLER (Alt Panel) ---</span>
+<span class="function">plot</span>(<span class="string">"WVF"</span>, <span class="variable">wvf</span>, <span class="string">"#888"</span>, <span class="string">"histogram"</span>, <span class="string">"lower"</span>)
+<span class="function">plot</span>(<span class="string">"Upper"</span>, <span class="variable">upperBand</span>, <span class="string">"#00FFFF"</span>, <span class="string">"line"</span>, <span class="string">"lower"</span>)
+
+<span class="comment"># --- SİNYAL ---</span>
+<span class="comment"># Dün bandın dışındaydı, bugün içine girdi (Dönüş Sinyali)</span>
+<span class="keyword">if</span> <span class="function">history</span>(<span class="string">"wvf"</span>, <span class="number">1</span>) >= <span class="function">history</span>(<span class="string">"upperBand"</span>, <span class="number">1</span>) <span class="keyword">and</span> <span class="variable">wvf</span> < <span class="variable">upperBand</span>:
+    <span class="function">buy</span>()
+    <span class="function">plot_shape</span>(<span class="keyword">True</span>, <span class="string">"DİP"</span>, <span class="string">"#00FF00"</span>, <span class="string">"arrowUp"</span>, <span class="string">"below"</span>)
+
+<span class="comment"># Döngü için kaydet</span>
+<span class="function">store</span>(<span class="string">"upperBand"</span>, <span class="variable">upperBand</span>)</code></pre>
+        </div>
+    </div>
+</body>
+</html>
