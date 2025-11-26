@@ -22,6 +22,8 @@ import { Editor } from "@monaco-editor/react";
 import { createChart, ColorType } from "lightweight-charts";
 import "@xyflow/react/dist/style.css";
 
+const API_BASE_URL = "https://algo-backend-ld5h.onrender.com";
+
 // --- STYLES ---
 const nodeStyle = {
   background: "#1e1e1e",
@@ -1311,10 +1313,7 @@ if r > (100 - esik_deger):
         stop_loss: Number(strategy.actionNode?.data?.stopLoss || 0),
         take_profit: Number(strategy.actionNode?.data?.takeProfit || 0),
       };
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/backtest",
-        payload
-      );
+      const res = await axios.post(`${API_BASE_URL}/api/optimize`, payload);
       setBacktestResult(res.data);
     } catch (e) {
       alert("Hata: " + e.message);
@@ -1365,10 +1364,7 @@ if r > (100 - esik_deger):
         stop_loss: Number(strategy.actionNode?.data?.stopLoss || 0),
         take_profit: Number(strategy.actionNode?.data?.takeProfit || 0),
       };
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/optimize",
-        payload
-      );
+      const res = await axios.post(`${API_BASE_URL}/api/optimize`, payload);
       setOptimizationResult(res.data);
     } catch (e) {
       alert("Optimizasyon Hatası: " + e.message);
