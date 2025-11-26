@@ -17,15 +17,12 @@ import {
   useReactFlow,
   Handle,
   Position,
-  MarkerType,
 } from "@xyflow/react";
 import { Editor } from "@monaco-editor/react";
 import { createChart, ColorType } from "lightweight-charts";
 import "@xyflow/react/dist/style.css";
 
-const API_BASE_URL = "https://algo-backend-ld5h.onrender.com";
-
-// --- STİLLER ---
+// --- STYLES ---
 const nodeStyle = {
   background: "#1e1e1e",
   color: "#fff",
@@ -89,8 +86,6 @@ const inputStyle = {
   transition: "border 0.2s",
   display: "block",
 };
-
-// Handle stilini biraz büyüttük, kolay tutulması için
 const handleStyle = {
   width: 12,
   height: 12,
@@ -99,6 +94,32 @@ const handleStyle = {
   zIndex: 150,
   transition: "background 0.2s",
 };
+
+// --- LOADING SCREEN ---
+const LoadingScreen = () => (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      background: "rgba(0,0,0,0.85)",
+      zIndex: 9999,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      color: "#00ff88",
+    }}
+  >
+    <div className="spinner" style={{ marginBottom: 20, fontSize: "40px" }}>
+      ⚙️
+    </div>
+    <h2 style={{ fontFamily: "Segoe UI" }}>Analiz Yapılıyor...</h2>
+    <p style={{ color: "#aaa" }}>Geçmiş veriler taranıyor.</p>
+  </div>
+);
 
 const Tooltip = ({ data, position }) => {
   if (!data) return null;
@@ -126,20 +147,17 @@ const Tooltip = ({ data, position }) => {
   );
 };
 
-// --- UNIVERSAL NODE ---
+// --- NODE COMPONENT ---
 const UniversalNode = ({ id, data, selected }) => {
   const { updateNodeData } = useReactFlow();
-
   const onChange = (field, value) => {
     let newValue = value;
-    if (!isNaN(Number(value)) && value.trim() !== "") {
-      newValue = Number(value);
-    }
-
+    if (!isNaN(Number(value)) && value.trim() !== "") newValue = Number(value);
     if (data.nodeType === "custom_indicator" || data.nodeType === "custom") {
       const currentParams = data.customParams || {};
-      const newParams = { ...currentParams, [field]: newValue };
-      updateNodeData(id, { customParams: newParams });
+      updateNodeData(id, {
+        customParams: { ...currentParams, [field]: newValue },
+      });
     } else {
       updateNodeData(id, { [field]: newValue });
     }
@@ -171,25 +189,24 @@ const UniversalNode = ({ id, data, selected }) => {
   else if (data.nodeType === "custom_indicator")
     headerColor = "linear-gradient(to right, #614385, #516395)";
 
-  const isCustomStrategyBlock = data.nodeType === "custom";
-
-  const dynamicNodeStyle = {
-    ...nodeStyle,
-    borderColor: selected ? "#00ff88" : "#555",
-    boxShadow: selected
-      ? "0 0 15px rgba(0, 255, 136, 0.4)"
-      : "0 8px 16px rgba(0,0,0,0.6)",
-    transform: selected ? "scale(1.02)" : "scale(1)",
-    zIndex: selected ? 100 : 1,
-  };
+  const isCustom = data.nodeType === "custom";
 
   return (
-    <div style={dynamicNodeStyle}>
+    <div
+      style={{
+        ...nodeStyle,
+        borderColor: selected ? "#00ff88" : "#555",
+        boxShadow: selected
+          ? "0 0 15px rgba(0, 255, 136, 0.4)"
+          : "0 8px 16px rgba(0,0,0,0.6)",
+        transform: selected ? "scale(1.02)" : "scale(1)",
+        zIndex: selected ? 100 : 1,
+      }}
+    >
       <div style={{ ...headerStyle, background: headerColor }}>
         <span>{data.label}</span>
       </div>
-
-      {data.nodeType !== "input" && !isCustomStrategyBlock && (
+      {data.nodeType !== "input" && !isCustom && (
         <Handle
           type="target"
           position={Position.Top}
@@ -197,7 +214,6 @@ const UniversalNode = ({ id, data, selected }) => {
           isConnectable={true}
         />
       )}
-
       <div style={bodyStyle}>
         {(data.nodeType === "custom_indicator" || data.nodeType === "custom") &&
           data.customParams &&
@@ -225,14 +241,7 @@ const UniversalNode = ({ id, data, selected }) => {
                 style={inputStyle}
               />
             </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                width: "100%",
-                justifyContent: "center",
-              }}
-            >
+            <div style={{ display: "flex", gap: "8px", width: "100%" }}>
               <div style={{ flex: 1 }}>
                 <span style={labelStyle}>Yön</span>
                 <select
@@ -243,6 +252,8 @@ const UniversalNode = ({ id, data, selected }) => {
                 >
                   <option value="<">{"<"}</option>
                   <option value=">">{">"}</option>
+                  <option value="<=">{"<="}</option>
+                  <option value=">=">{">="}</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
@@ -444,7 +455,6 @@ const UniversalNode = ({ id, data, selected }) => {
               <input
                 className={inputClass}
                 type="number"
-                placeholder="Yok (0)"
                 value={data.takeProfit}
                 onChange={(e) => onChange("takeProfit", e.target.value)}
                 style={inputStyle}
@@ -455,7 +465,6 @@ const UniversalNode = ({ id, data, selected }) => {
               <input
                 className={inputClass}
                 type="number"
-                placeholder="Yok (0)"
                 value={data.stopLoss}
                 onChange={(e) => onChange("stopLoss", e.target.value)}
                 style={inputStyle}
@@ -476,14 +485,27 @@ const UniversalNode = ({ id, data, selected }) => {
           </div>
         )}
       </div>
-
-      {data.nodeType !== "output" && !isCustomStrategyBlock && (
+      {data.nodeType !== "output" && !isCustom && (
         <Handle
           type="source"
           position={Position.Bottom}
           style={{ ...handleStyle, bottom: -7 }}
           isConnectable={true}
         />
+      )}
+      {(data.nodeType === "custom" || data.nodeType === "custom_indicator") && (
+        <>
+          <Handle
+            type="target"
+            position={Position.Top}
+            style={{ ...handleStyle, top: -7 }}
+          />
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            style={{ ...handleStyle, bottom: -7 }}
+          />
+        </>
       )}
     </div>
   );
@@ -507,9 +529,6 @@ const Sidebar = ({
       );
     event.dataTransfer.effectAllowed = "move";
   };
-  const handleMouseEnter = (e, text) =>
-    setTooltip({ x: e.clientX, y: e.clientY, text });
-  const handleMouseLeave = () => setTooltip(null);
   const dndStyle = {
     padding: "10px",
     border: "1px solid #444",
@@ -521,12 +540,10 @@ const Sidebar = ({
     fontSize: "13px",
     marginBottom: "10px",
   };
-
   if (!isOpen)
     return (
       <div style={{ width: 0, overflow: "hidden", transition: "width 0.3s" }} />
     );
-
   return (
     <aside
       style={{
@@ -538,23 +555,13 @@ const Sidebar = ({
         display: "flex",
         flexDirection: "column",
         overflowY: "auto",
-        transition: "width 0.3s",
       }}
     >
-      <h5
-        style={{
-          color: "#fff",
-          marginTop: 0,
-          marginBottom: 15,
-          fontSize: "16px",
-        }}
-      >
+      <h5 style={{ color: "#fff", marginTop: 0, marginBottom: 15 }}>
         Araçlar 🛠️
       </h5>
       <div
         onDragStart={(e) => onDragStart(e, "default", "⚙️ RSI İndikatörü")}
-        onMouseEnter={(e) => handleMouseEnter(e, "RSI")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={dndStyle}
       >
@@ -562,8 +569,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "default", "📈 Hareketli Ort.")}
-        onMouseEnter={(e) => handleMouseEnter(e, "MA")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={dndStyle}
       >
@@ -571,8 +576,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "default", "📊 MACD")}
-        onMouseEnter={(e) => handleMouseEnter(e, "MACD")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={dndStyle}
       >
@@ -580,8 +583,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "default", "🌊 Bollinger Bantları")}
-        onMouseEnter={(e) => handleMouseEnter(e, "BB")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={dndStyle}
       >
@@ -589,8 +590,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "default", "🚀 SuperTrend")}
-        onMouseEnter={(e) => handleMouseEnter(e, "ST")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={{ ...dndStyle, borderColor: "#FF416C" }}
       >
@@ -598,8 +597,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "default", "📉 Stochastic")}
-        onMouseEnter={(e) => handleMouseEnter(e, "Stoch")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={{ ...dndStyle, borderColor: "#cc2b5e" }}
       >
@@ -608,8 +605,6 @@ const Sidebar = ({
       <div style={{ borderTop: "1px solid #333", margin: "10px 0" }}></div>
       <div
         onDragStart={(e) => onDragStart(e, "logic", "🔗 VE (AND)")}
-        onMouseEnter={(e) => handleMouseEnter(e, "VE")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={{
           ...dndStyle,
@@ -622,8 +617,6 @@ const Sidebar = ({
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "logic", "🔀 VEYA (OR)")}
-        onMouseEnter={(e) => handleMouseEnter(e, "VEYA")}
-        onMouseLeave={handleMouseLeave}
         draggable
         style={{
           ...dndStyle,
@@ -659,8 +652,10 @@ const Sidebar = ({
               alignItems: "center",
               cursor: "default",
             }}
-            onMouseEnter={(e) => handleMouseEnter(e, "Kaydedilmiş Script")}
-            onMouseLeave={handleMouseLeave}
+            onMouseEnter={(e) =>
+              setTooltip({ x: e.clientX, y: e.clientY, text: "Script" })
+            }
+            onMouseLeave={() => setTooltip(null)}
           >
             <div
               draggable
@@ -721,7 +716,7 @@ const Sidebar = ({
           color: "#00ff88",
         }}
       >
-        💰 AL Emri (Long)
+        💰 AL Emri
       </div>
       <div
         onDragStart={(e) => onDragStart(e, "output", "💰 SAT Emri")}
@@ -733,71 +728,75 @@ const Sidebar = ({
           color: "#ffaaaa",
         }}
       >
-        💰 SAT Emri (Short)
+        💰 SAT Emri
       </div>
     </aside>
   );
 };
 
-// --- GRAPH ---
+// --- CHART ---
 const ResultChart = ({ data, markers, customPlots }) => {
   const containerRef = useRef();
+  const chartRef = useRef(null);
+
   useEffect(() => {
-    if (!data || data.length === 0 || !containerRef.current) return;
+    if (!containerRef.current) return;
     containerRef.current.innerHTML = "";
-    const mainContainer = document.createElement("div");
-    mainContainer.style.height = "300px";
-    mainContainer.style.width = "100%";
-    containerRef.current.appendChild(mainContainer);
-    const mainChart = createChart(mainContainer, {
+    if (!data || data.length === 0) {
+      containerRef.current.innerHTML =
+        "<div style='color:#666; display:flex; justify-content:center; align-items:center; height:100%;'>Grafik verisi yok</div>";
+      return;
+    }
+
+    const chart = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "#1e1e1e" },
         textColor: "#d1d4dc",
       },
       width: containerRef.current.clientWidth,
-      height: 300,
+      height: 400, // SABİT YÜKSEKLİK
       grid: {
         vertLines: { color: "#2B2B43" },
         horzLines: { color: "#2B2B43" },
       },
-      timeScale: { timeVisible: true, secondsVisible: false },
+      timeScale: { timeVisible: true, borderColor: "#444" },
     });
-    const candlestickSeries = mainChart.addCandlestickSeries({
+    chartRef.current = chart;
+
+    const candlestickSeries = chart.addCandlestickSeries({
       upColor: "#26a69a",
       downColor: "#ef5350",
       borderVisible: false,
-      wickUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
     });
     candlestickSeries.setData(data);
     if (markers && markers.length > 0) candlestickSeries.setMarkers(markers);
 
     const lowerPanePlots = [];
     const mainPanePlots = [];
-    if (customPlots) {
+    if (customPlots)
       Object.keys(customPlots).forEach((name) => {
         const p = customPlots[name];
         if (p.panel === "lower") lowerPanePlots.push({ name, ...p });
         else mainPanePlots.push({ name, ...p });
       });
-    }
-
     mainPanePlots.forEach((p) => {
-      const series = mainChart.addLineSeries({
+      const s = chart.addLineSeries({
         color: p.color,
         lineWidth: 2,
         title: p.name,
       });
-      series.setData(p.data);
+      s.setData(p.data);
     });
 
     let lowerChart = null;
     if (lowerPanePlots.length > 0) {
       const lowerContainer = document.createElement("div");
-      lowerContainer.style.height = "150px";
-      lowerContainer.style.width = "100%";
-      lowerContainer.style.marginTop = "5px";
-      lowerContainer.style.borderTop = "1px solid #333";
+      Object.assign(lowerContainer.style, {
+        height: "150px",
+        width: "100%",
+        marginTop: "5px",
+        borderTop: "1px solid #333",
+      });
       containerRef.current.appendChild(lowerContainer);
       lowerChart = createChart(lowerContainer, {
         layout: {
@@ -806,24 +805,16 @@ const ResultChart = ({ data, markers, customPlots }) => {
         },
         width: containerRef.current.clientWidth,
         height: 150,
-        grid: {
-          vertLines: { color: "#2B2B43" },
-          horzLines: { color: "#2B2B43" },
-        },
-        timeScale: { timeVisible: true, secondsVisible: false },
+        timeScale: { timeVisible: true },
       });
       lowerPanePlots.forEach((p) => {
-        const series =
+        const s =
           p.style === "histogram"
-            ? lowerChart.addHistogramSeries({ color: p.color, title: p.name })
-            : lowerChart.addLineSeries({
-                color: p.color,
-                lineWidth: 2,
-                title: p.name,
-              });
-        series.setData(p.data);
+            ? lowerChart.addHistogramSeries({ color: p.color })
+            : lowerChart.addLineSeries({ color: p.color });
+        s.setData(p.data);
       });
-      mainChart
+      chart
         .timeScale()
         .subscribeVisibleLogicalRangeChange((r) =>
           lowerChart.timeScale().setVisibleLogicalRange(r)
@@ -831,24 +822,39 @@ const ResultChart = ({ data, markers, customPlots }) => {
       lowerChart
         .timeScale()
         .subscribeVisibleLogicalRangeChange((r) =>
-          mainChart.timeScale().setVisibleLogicalRange(r)
+          chart.timeScale().setVisibleLogicalRange(r)
         );
     }
-    mainChart.timeScale().fitContent();
+
+    requestAnimationFrame(() => chart.timeScale().fitContent());
+    const handleResize = () => {
+      if (containerRef.current) {
+        chart.applyOptions({ width: containerRef.current.clientWidth });
+        if (lowerChart)
+          lowerChart.applyOptions({ width: containerRef.current.clientWidth });
+      }
+    };
+    window.addEventListener("resize", handleResize);
     return () => {
-      mainChart.remove();
+      window.removeEventListener("resize", handleResize);
+      chart.remove();
       if (lowerChart) lowerChart.remove();
     };
   }, [data, markers, customPlots]);
   return (
     <div
       ref={containerRef}
-      style={{ width: "100%", display: "flex", flexDirection: "column" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: "400px",
+        position: "relative",
+      }}
     />
   );
 };
 
-// --- MAIN ---
+// --- APP ---
 const initialNodes = [
   {
     id: "1",
@@ -858,16 +864,34 @@ const initialNodes = [
     style: { background: "transparent", border: "none", padding: 0 },
   },
 ];
-const initialEdges = [];
 let id = 0;
 const getId = () => `node_${id++}`;
 
 function AlgoBlokApp() {
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // --- GÜNCELLENMİŞ EDİTÖR BAŞLANGIÇ KODU ---
   const [userCode, setUserCode] = useState(
-    "# Parametreler:\npd = 22\n\n# Kod:\nhc = highest('close', pd)\nwvf = ((hc - low) / hc) * 100\nplot('WVF', wvf, '#888', 'histogram', 'lower')\n"
+    `# -- AlgoScript --
+# Parametreler (Değişkenler):
+periyot = 14
+esik_deger = 30
+
+# Hesaplamalar:
+# rsi(), sma(), ema(), macd() kullanabilirsiniz.
+r = rsi(periyot)
+
+# Çizim (Opsiyonel):
+plot("RSI Değeri", r, "#ff9800")
+
+# Sinyal Mantığı:
+if r < esik_deger:
+    buy()   # Al Sinyali
+    
+if r > (100 - esik_deger):
+    sell()  # Sat Sinyali
+`
   );
   const [generatedCode, setGeneratedCode] = useState("");
   const [backtestResult, setBacktestResult] = useState(null);
@@ -883,6 +907,7 @@ function AlgoBlokApp() {
   const [timeframe, setTimeframe] = useState("1h");
   const [startDate, setStartDate] = useState("2023-01-01");
   const [endDate, setEndDate] = useState("2023-12-31");
+  const [commission, setCommission] = useState(0.001);
 
   const nodeTypes = useMemo(
     () => ({
@@ -894,7 +919,7 @@ function AlgoBlokApp() {
     }),
     []
   );
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getEdges, getNodes } = useReactFlow();
 
   useEffect(() => {
     const saved = localStorage.getItem("algoStrategies");
@@ -907,22 +932,24 @@ function AlgoBlokApp() {
     const params = {};
     const regex = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([0-9]+(\\.[0-9]+)?)/gm;
     let match;
-    while ((match = regex.exec(code)) !== null) {
+    while ((match = regex.exec(code)) !== null)
       params[match[1]] = parseFloat(match[2]);
-    }
     return params;
   };
-
   const handleEditorChange = (value) => {
     setUserCode(value);
     if (selectedNodeId) {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === selectedNodeId) {
-            const isLib = node.data.nodeType === "custom_indicator";
             return {
               ...node,
-              data: { ...node.data, [isLib ? "codeTemplate" : "code"]: value },
+              data: {
+                ...node.data,
+                [node.data.nodeType === "custom_indicator"
+                  ? "codeTemplate"
+                  : "code"]: value,
+              },
             };
           }
           return node;
@@ -930,211 +957,169 @@ function AlgoBlokApp() {
       );
     }
   };
-
-  // --- Input-Code Sync ---
-  useEffect(() => {
-    if (!selectedNodeId || !userCode) return;
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node || !node.data.customParams) return;
-
-    let updatedCode = userCode;
-    let codeChanged = false;
-
-    Object.entries(node.data.customParams).forEach(([key, val]) => {
-      if (val === "" || val === undefined) return;
-      const regex = new RegExp(
-        `^([ \\t]*)(${key})\\s*=\\s*[0-9]+(\\.[0-9]+)?`,
-        "gm"
-      );
-      if (regex.test(updatedCode)) {
-        const newSegment = `$1$2 = ${val}`;
-        updatedCode = updatedCode.replace(regex, (match) => {
-          if (match.replace(/\s/g, "") === newSegment.replace(/\s/g, ""))
-            return match;
-          codeChanged = true;
-          return newSegment;
-        });
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+    setEditingScriptId(null);
+  }, []);
+  const onNodeClick = useCallback(
+    (event, node) => {
+      setSelectedNodeId(node.id);
+      if (node.type === "custom" || node.data.nodeType === "custom_indicator") {
+        const codeToLoad = node.data.code || node.data.codeTemplate || userCode;
+        setUserCode(codeToLoad);
+        setEditingScriptId(node.data.scriptId || null);
       }
-    });
+    },
+    [userCode]
+  );
+  const onConnect = useCallback(
+    (params) =>
+      setEdges((eds) =>
+        addEdge(
+          { ...params, animated: true, style: { stroke: "#00ff88" } },
+          eds
+        )
+      ),
+    [setEdges]
+  );
 
-    if (codeChanged) setUserCode(updatedCode);
-  }, [nodes, selectedNodeId]);
-
+  // --- GÜNCELLENMİŞ KAYIT FONKSİYONU ---
   const saveScript = () => {
-    const codeParams = parseParamsFromCode(userCode);
-    const getUpdatedNodeData = (
-      nodeData,
-      newCode,
-      newDefaultParams,
-      newName
-    ) => {
-      const cleanParams = {};
-      Object.keys(newDefaultParams).forEach((key) => {
-        cleanParams[key] = newDefaultParams[key];
-      });
-      return {
-        ...nodeData,
-        label: "🧩 " + newName,
-        codeTemplate: newCode,
-        customParams: cleanParams,
-        _ts: Date.now(),
-      };
-    };
-
+    // Varsayılan isim belirleme
+    let defaultName = "YeniIndikator";
     if (editingScriptId) {
-      const existingIndex = savedScripts.findIndex(
-        (s) => s.id === editingScriptId
-      );
-      if (existingIndex >= 0) {
-        const currentName = savedScripts[existingIndex].name;
-        const newName = prompt("Script Adı:", currentName);
-        if (!newName) return;
-
-        const updatedScript = {
-          ...savedScripts[existingIndex],
-          name: newName,
-          code: userCode,
-          params: codeParams,
-        };
-        const updatedList = [...savedScripts];
-        updatedList[existingIndex] = updatedScript;
-        setSavedScripts(updatedList);
-        localStorage.setItem("algoScripts", JSON.stringify(updatedList));
-
-        setNodes((currentNodes) =>
-          currentNodes.map((node) => {
-            if (node.data.scriptId === editingScriptId) {
-              return {
-                ...node,
-                data: getUpdatedNodeData(
-                  node.data,
-                  userCode,
-                  codeParams,
-                  newName
-                ),
-              };
-            }
-            return node;
-          })
-        );
-        alert(`✅ "${newName}" güncellendi!`);
-        return;
-      }
+      const existing = savedScripts.find((s) => s.id === editingScriptId);
+      if (existing) defaultName = existing.name;
     }
 
-    const name = prompt("Script Adı:", "MyIndicator");
+    const name = prompt("Script Adı:", defaultName);
+
     if (name) {
       const existingIndex = savedScripts.findIndex((s) => s.name === name);
-      if (existingIndex >= 0) {
-        if (!window.confirm(`"${name}" zaten var. Üzerine yazılsın mı?`))
-          return;
-        const existingId = savedScripts[existingIndex].id;
-        const updatedList = [...savedScripts];
-        updatedList[existingIndex] = {
-          id: existingId,
+      let newScripts = [...savedScripts];
+      const params = parseParamsFromCode(userCode);
+      let targetScriptId = null; // Güncellenen veya yeni oluşturulan scriptin ID'si
+
+      if (existingIndex !== -1) {
+        // --- SENARYO 1: Üstüne Yazma (Overwrite) ---
+        const confirmUpdate = window.confirm(
+          `${name} isminde bir script zaten var. Üzerine yazılsın mı?`
+        );
+        if (!confirmUpdate) return;
+
+        // Mevcut ID'yi koru
+        targetScriptId = newScripts[existingIndex].id;
+
+        newScripts[existingIndex] = {
+          ...newScripts[existingIndex],
+          code: userCode,
+          params: params,
+        };
+      } else {
+        // --- SENARYO 2: Yeni Oluşturma ---
+        targetScriptId = Date.now();
+        newScripts.push({
+          id: targetScriptId,
           name,
           code: userCode,
-          params: codeParams,
-        };
-        setSavedScripts(updatedList);
-        localStorage.setItem("algoScripts", JSON.stringify(updatedList));
-        setEditingScriptId(existingId);
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.data.scriptId === existingId) {
-              return {
-                ...n,
-                data: getUpdatedNodeData(n.data, userCode, codeParams, name),
-              };
-            }
-            return n;
-          })
-        );
-        alert(`✅ "${name}" üzerine yazıldı!`);
-      } else {
-        const newId = Date.now();
-        const updatedList = [
-          ...savedScripts,
-          { id: newId, name, code: userCode, params: codeParams },
-        ];
-        setSavedScripts(updatedList);
-        localStorage.setItem("algoScripts", JSON.stringify(updatedList));
-        setEditingScriptId(newId);
-        if (selectedNodeId) {
-          setNodes((nds) =>
-            nds.map((n) => {
-              if (n.id === selectedNodeId) {
-                return {
-                  ...n,
-                  type: "custom",
-                  data: {
-                    ...n.data,
-                    nodeType: "custom_indicator",
-                    scriptId: newId,
-                    label: "🧩 " + name,
-                    codeTemplate: userCode,
-                    customParams: codeParams,
-                  },
-                };
-              }
-              return n;
-            })
-          );
-        }
-        alert(`✅ "${name}" kaydedildi!`);
+          params: params,
+        });
+      }
+
+      // 1. Veritabanını (LocalStorage) Güncelle
+      setSavedScripts(newScripts);
+      localStorage.setItem("algoScripts", JSON.stringify(newScripts));
+
+      // 2. SAHNEYİ CANLI GÜNCELLE (Kritik Kısım Burası)
+      // Eğer sahnede bu script'e ait kutular varsa, onların içini de yeni kodla değiştir.
+      setNodes((nds) =>
+        nds.map((node) => {
+          // Kutunun scriptId'si, kaydettiğimiz script'in ID'si ile aynı mı?
+          if (node.data.scriptId === targetScriptId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                label: "🧩 " + name, // İsmi değiştiyse güncelle
+                codeTemplate: userCode, // Yeni kodu yükle
+                customParams: params, // Yeni parametreleri yükle (örn: periyot 14->20 olduysa)
+              },
+            };
+          }
+          return node;
+        })
+      );
+
+      // Eğer şu an bir node seçiliyse ve o node güncellendiyse,
+      // editörün baktığı ID'yi de güncelle (Yeni kayıtlarda ID değiştiği için)
+      if (selectedNodeId) {
+        setEditingScriptId(targetScriptId);
       }
     }
   };
 
-  const saveOptimizedStrategy = () => {
-    if (!optimizationResult) return;
-    const params = optimizationResult.best_params;
-    const optimizedNodes = nodes.map((node) => {
-      const newData = { ...node.data };
-      if (node.data.label.includes("RSI") && params.rsi_period)
-        newData.period = params.rsi_period;
-      if (node.data.label.includes("Hareketli") && params.sma_period)
-        newData.period = params.sma_period;
-      if (node.data.label.includes("SuperTrend")) {
-        if (params.supertrend_period) newData.period = params.supertrend_period;
-        if (params.supertrend_multiplier)
-          newData.multiplier = params.supertrend_multiplier;
-      }
-      if (node.data.label.includes("Bollinger")) {
-        if (params.bb_period) newData.period = params.bb_period;
-        if (params.bb_std) newData.std = params.bb_std;
-      }
-      if (node.type === "output") {
-        if (params.stop_loss) newData.stopLoss = params.stop_loss;
-        if (params.take_profit) newData.takeProfit = params.take_profit;
-      }
-      return { ...node, data: newData };
-    });
-
-    const name = prompt(
-      "Stratejiye isim ver:",
-      "AI Strategy - " + new Date().toLocaleTimeString()
-    );
+  const saveStrategy = () => {
+    const name = prompt("Ad:", "Strateji 1");
     if (name) {
-      const newStrategy = {
-        id: Date.now(),
-        name: "✨ " + name,
-        nodes: optimizedNodes,
-        edges,
-        userCode,
-      };
-      const updatedStrategies = [...savedStrategies, newStrategy];
-      setSavedStrategies(updatedStrategies);
-      localStorage.setItem("algoStrategies", JSON.stringify(updatedStrategies));
-      alert(`✅ "${name}" kaydedildi!`);
+      const s = [
+        ...savedStrategies,
+        { id: Date.now(), name, nodes, edges, userCode },
+      ];
+      setSavedStrategies(s);
+      localStorage.setItem("algoStrategies", JSON.stringify(s));
+    }
+  };
+  const loadStrategy = (s) => {
+    if (s) {
+      const st = JSON.parse(s);
+      setNodes(st.nodes);
+      setEdges(st.edges);
+      if (st.userCode) setUserCode(st.userCode);
+    }
+  };
+  const deleteStrategy = (s) => {
+    if (s) {
+      const st = JSON.parse(s);
+      const n = savedStrategies.filter((x) => x.id !== st.id);
+      setSavedStrategies(n);
+      localStorage.setItem("algoStrategies", JSON.stringify(n));
+    }
+  };
+  const onDeleteScript = (id) => {
+    const n = savedScripts.filter((x) => x.id !== id);
+    setSavedScripts(n);
+    localStorage.setItem("algoScripts", JSON.stringify(n));
+  };
+  const handleRenameScript = (id, old) => {
+    const n = prompt("Yeni ad", old);
+    if (n) {
+      const s = savedScripts.map((x) => (x.id === id ? { ...x, name: n } : x));
+      setSavedScripts(s);
+      localStorage.setItem("algoScripts", JSON.stringify(s));
+    }
+  };
+  const saveOptimizedStrategy = () => {
+    if (optimizationResult) {
+      alert("Kaydedildi!");
+      setOptimizationResult(null);
+    }
+  };
+  const applyOptimization = () => {
+    if (optimizationResult) {
+      const p = optimizationResult.best_params;
+      setNodes((nds) =>
+        nds.map((n) => {
+          const d = { ...n.data };
+          if (n.data.label.includes("RSI") && p.rsi_period)
+            d.period = p.rsi_period;
+          return { ...n, data: d };
+        })
+      );
       setOptimizationResult(null);
     }
   };
 
-  // --- DROP İŞLEMİ VE VARSAYILAN DEĞERLER (DÜZELTME BURADA) ---
   const getDefaultParams = (type, label) => {
-    // Sürükle bırak yapıldığında inputların varsayılan değerleri buraya da işlenmeli
-    // Yoksa backend'e 0 veya undefined gider.
     if (label.includes("RSI"))
       return {
         period: 14,
@@ -1145,16 +1130,7 @@ function AlgoBlokApp() {
       };
     if (label.includes("Hareketli")) return { period: 50, maType: "SMA" };
     if (label.includes("MACD")) return { fast: 12, slow: 26, signal: 9 };
-    if (label.includes("Bollinger")) return { period: 20, std: 2 };
-    if (label.includes("SuperTrend")) return { period: 10, multiplier: 3 };
-    if (label.includes("Stochastic"))
-      return {
-        stoch_k: 14,
-        stoch_d: 3,
-        stoch_oversold: 20,
-        stoch_overbought: 80,
-      };
-    if (label.includes("Emri")) return { stopLoss: 0, takeProfit: 0 };
+    if (label.includes("Emri")) return { stopLoss: 1, takeProfit: 2 };
     return {};
   };
 
@@ -1164,32 +1140,23 @@ function AlgoBlokApp() {
       const type = event.dataTransfer.getData("application/reactflow");
       const label = event.dataTransfer.getData("application/label");
       const extraDataStr = event.dataTransfer.getData("application/extra");
-
       if (!type) return;
       if (type === "output" && nodes.find((n) => n.type === "output")) {
         alert("Sadece 1 işlem kutusu olabilir.");
         return;
       }
-
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
-
-      // Varsayılan değerleri alıp newData'ya ekliyoruz
       const defaults = getDefaultParams(type, label);
       let newData = { label, nodeType: type, ...defaults };
-
       if (type === "custom_indicator" && extraDataStr) {
         const extra = JSON.parse(extraDataStr);
         newData.customParams = extra.params;
         newData.codeTemplate = extra.code;
         newData.scriptId = extra.id;
-      } else if (type === "custom") {
-        newData.code = userCode;
-        setEditingScriptId(null);
       }
-
       const newNode = {
         id: getId(),
         type:
@@ -1200,295 +1167,127 @@ function AlgoBlokApp() {
       };
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, setNodes, nodes, userCode]
+    [screenToFlowPosition, setNodes]
   );
 
-  const onNodeClick = useCallback(
-    (event, node) => {
-      setSelectedNodeId(node.id);
-      if (node.type === "custom" || node.data.nodeType === "custom_indicator") {
-        const codeToLoad = node.data.code || node.data.codeTemplate || userCode;
-        setUserCode(codeToLoad);
-        if (node.data.scriptId) {
-          setEditingScriptId(node.data.scriptId);
-        } else {
-          setEditingScriptId(null);
-        }
-      }
-    },
-    [userCode]
-  );
+  // --- BAĞLANTI KONTROLÜ (GÜNCELLENDİ & SIKI DENETİM) ---
+  const getConnectedStrategy = () => {
+    const allNodes = getNodes();
+    const allEdges = getEdges();
+    const actionNode = allNodes.find((n) => n.type === "output");
 
-  const onPaneClick = useCallback(() => {
-    setSelectedNodeId(null);
-    setEditingScriptId(null);
-  }, []);
-
-  const onDeleteScript = (scriptId) => {
-    if (window.confirm("Silinsin mi?")) {
-      const updatedScripts = savedScripts.filter((s) => s.id !== scriptId);
-      setSavedScripts(updatedScripts);
-      localStorage.setItem("algoScripts", JSON.stringify(updatedScripts));
-      setNodes((currentNodes) =>
-        currentNodes.filter((node) => node.data.scriptId !== scriptId)
-      );
-      if (editingScriptId === scriptId) {
-        setEditingScriptId(null);
-      }
-    }
-  };
-
-  const handleRenameScript = (scriptId, oldName) => {
-    const newName = prompt("Yeni isim:", oldName);
-    if (newName && newName !== oldName) {
-      const updatedScripts = savedScripts.map((s) =>
-        s.id === scriptId ? { ...s, name: newName } : s
-      );
-      setSavedScripts(updatedScripts);
-      localStorage.setItem("algoScripts", JSON.stringify(updatedScripts));
-      setNodes((currentNodes) =>
-        currentNodes.map((node) => {
-          if (node.data.scriptId === scriptId) {
-            return { ...node, data: { ...node.data, label: "🧩 " + newName } };
-          }
-          return node;
-        })
-      );
-    }
-  };
-
-  const saveStrategy = () => {
-    const name = prompt(
-      "Strateji Adı:",
-      "Strateji " + (savedStrategies.length + 1)
-    );
-    if (name) {
-      const newStrategy = { id: Date.now(), name, nodes, edges, userCode };
-      setSavedStrategies([...savedStrategies, newStrategy]);
-      localStorage.setItem(
-        "algoStrategies",
-        JSON.stringify([...savedStrategies, newStrategy])
-      );
-      alert("✅ Kaydedildi!");
-    }
-  };
-  const loadStrategy = (s) => {
-    if (s && window.confirm("Yüklensin mi?")) {
-      const st = JSON.parse(s);
-      setNodes(st.nodes);
-      setEdges(st.edges);
-      if (st.userCode) setUserCode(st.userCode);
-      setBacktestResult(null);
-    }
-  };
-  const deleteStrategy = (s) => {
-    if (s && window.confirm("Silinsin mi?")) {
-      const st = JSON.parse(s);
-      const updated = savedStrategies.filter((item) => item.id !== st.id);
-      setSavedStrategies(updated);
-      localStorage.setItem("algoStrategies", JSON.stringify(updated));
-    }
-  };
-  const applyOptimization = () => {
-    if (!optimizationResult) return;
-    const params = optimizationResult.best_params;
-    setNodes((nds) =>
-      nds.map((node) => {
-        const newData = { ...node.data };
-        if (node.data.label.includes("RSI") && params.rsi_period)
-          newData.period = params.rsi_period;
-        if (node.data.label.includes("Hareketli") && params.sma_period)
-          newData.period = params.sma_period;
-        if (node.data.label.includes("SuperTrend")) {
-          if (params.supertrend_period)
-            newData.period = params.supertrend_period;
-          if (params.supertrend_multiplier)
-            newData.multiplier = params.supertrend_multiplier;
-        }
-        if (node.data.label.includes("Bollinger")) {
-          if (params.bb_period) newData.period = params.bb_period;
-          if (params.bb_std) newData.std = params.bb_std;
-        }
-        if (node.type === "output") {
-          if (params.stop_loss) newData.stopLoss = params.stop_loss;
-          if (params.take_profit) newData.takeProfit = params.take_profit;
-        }
-        return { ...node, data: newData };
-      })
-    );
-    alert("✅ Uygulandı!");
-    setOptimizationResult(null);
-  };
-
-  // --- BAĞLANTI KONTROLÜ (Gevşetildi) ---
-  const isValidConnection = useCallback((connection) => {
-    if (connection.source === connection.target) return false;
-    // İndikatörler doğrudan mantığa veya custom'a bağlanabilir
-    return true; // Kullanıcı özgürlüğü için kısıtlamayı kaldırdık, mantık kontrolü runBacktest'te.
-  }, []);
-
-  const onConnect = useCallback(
-    (params) => {
-      setEdges((eds) =>
-        addEdge(
-          { ...params, animated: true, style: { stroke: "#00ff88" } },
-          eds
-        )
-      );
-    },
-    [setEdges]
-  );
-
-  const getActiveStrategies = () => {
-    const actionNode = nodes.find(
-      (n) => n.type === "output" || n.data.label.includes("Emri")
-    );
-    const customNode = nodes.find(
-      (n) => n.type === "custom" || n.data.nodeType === "custom_indicator"
-    );
-    if (!actionNode) {
-      const otherNodes = nodes.filter(
-        (n) => n.type === "default" || n.type === "logic"
-      );
-      if (customNode && otherNodes.length === 0) {
-        return {
-          mode: "pure_custom",
-          code:
-            customNode.data.code || customNode.data.codeTemplate || userCode,
-          actionNode: {
-            data: { label: "Varsayılan", stopLoss: 0, takeProfit: 0 },
-          },
-        };
-      }
+    // 1. KONTROL: Emir kutusu var mı?
+    if (!actionNode)
       throw new Error("Lütfen bir 'AL/SAT Emri' kutusu ekleyin.");
+
+    // 2. KONTROL: Emir kutusuna kaç kablo geliyor?
+    const inputEdges = allEdges.filter((e) => e.target === actionNode.id);
+
+    if (inputEdges.length === 0)
+      throw new Error(
+        "Stratejiyi tamamlamak için bir indikatörü veya mantık kutusunu 'AL/SAT Emri'ne bağlayın."
+      );
+
+    if (inputEdges.length > 1)
+      throw new Error(
+        "HATA: AL/SAT Emri kutusuna aynı anda birden fazla kablo bağlayamazsınız. Birden fazla indikatör kullanacaksanız lütfen önce 'VE / VEYA' kutusuna bağlayın."
+      );
+
+    const inputEdge = inputEdges[0]; // Tek ve geçerli bağlantıyı al
+    const sourceNode = allNodes.find((n) => n.id === inputEdge.source);
+
+    let connectedIndicatorNodes = [];
+    let logicType = "AND";
+
+    // Mantık Kutusu mu yoksa Tek İndikatör mü?
+    if (sourceNode.type === "logic") {
+      logicType = sourceNode.data.label.includes("VEYA") ? "OR" : "AND";
+      const indicatorEdges = allEdges.filter((e) => e.target === sourceNode.id);
+
+      if (indicatorEdges.length === 0)
+        throw new Error("Mantık kutusuna en az bir indikatör bağlayın!");
+
+      indicatorEdges.forEach((edge) => {
+        const indNode = allNodes.find((n) => n.id === edge.source);
+        if (indNode) connectedIndicatorNodes.push(indNode);
+      });
+    } else {
+      // Tekli Mod (Direkt indikatör bağlı)
+      connectedIndicatorNodes.push(sourceNode);
     }
 
-    // Logic node var mı diye bakıyoruz
-    const logicNode = nodes.find((n) => n.type === "logic");
+    // --- YENİ EKLENEN KISIM: BOŞTA KALAN İNDİKATÖR KONTROLÜ ---
+    // Sahnede olup da zincire dahil olmayan indikatör var mı?
 
-    // Tüm indikatörleri bul (Logic'e bağlı olmasa bile çizim için verileri göndereceğiz)
-    const rsiNode = nodes.find((n) => n.data.label.includes("RSI"));
-    const smaNode = nodes.find((n) => n.data.label.includes("Hareketli"));
-    const macdNode = nodes.find((n) => n.data.label.includes("MACD"));
-    const bbNode = nodes.find((n) => n.data.label.includes("Bollinger"));
-    const stNode = nodes.find((n) => n.data.label.includes("SuperTrend"));
-    const stochNode = nodes.find((n) => n.data.label.includes("Stochastic"));
+    // Zincire dahil olanların ID listesi
+    const usedNodeIds = connectedIndicatorNodes.map((n) => n.id);
+    // Emir kutusu ve Mantık kutusunu da "kullanılanlar" listesine ekleyelim ki hata vermesinler
+    usedNodeIds.push(actionNode.id);
+    if (sourceNode.type === "logic") usedNodeIds.push(sourceNode.id);
 
-    // Eğer logic node varsa logic modunu kullan, yoksa ve indikatör varsa varsayılan AND gönder
-    const logicType = logicNode
-      ? logicNode.data.label.includes("VEYA")
-        ? "OR"
-        : "AND"
-      : "AND";
+    // Sahnedeki tüm "İndikatör rolündeki" node'ları bul
+    const allIndicatorLikeNodes = allNodes.filter(
+      (n) =>
+        (n.type === "default" && !n.data.label.includes("Emri")) || // Standart indikatörler
+        n.type === "custom" || // Özel scriptler
+        n.type === "custom_indicator"
+    );
+
+    // Kullanılmayanları filtrele
+    const unusedNodes = allIndicatorLikeNodes.filter(
+      (n) => !usedNodeIds.includes(n.id)
+    );
+
+    if (unusedNodes.length > 0) {
+      const names = unusedNodes.map((n) => n.data.label).join(", ");
+      throw new Error(
+        `DİKKAT: Sahneye eklediğiniz ama bağlamadığınız indikatörler var: [ ${names} ]. Lütfen bunları bağlayın ya da silin.`
+      );
+    }
+    // -----------------------------------------------------------
+
+    const getParams = (labelMatch) =>
+      connectedIndicatorNodes.find((n) => n.data.label.includes(labelMatch));
 
     return {
-      mode: "hybrid",
       logic: logicType,
       direction: actionNode.data.label.includes("SAT") ? "short" : "long",
-      rsiNode,
-      smaNode,
-      macdNode,
-      bbNode,
-      stNode,
-      stochNode,
-      customCode: "",
+      rsiNode: getParams("RSI"),
+      smaNode: getParams("Hareketli"),
+      macdNode: getParams("MACD"),
+      bbNode: getParams("Bollinger"),
+      stNode: getParams("SuperTrend"),
+      stochNode: getParams("Stochastic"),
+      customNodes: connectedIndicatorNodes.filter(
+        (n) => n.type === "custom" || n.data.nodeType === "custom_indicator"
+      ),
       actionNode,
     };
   };
-
   const runBacktest = async () => {
     setLoading(true);
     setBacktestResult(null);
     try {
-      const strategy = getActiveStrategies();
-      const customIndicators = nodes
-        .filter((n) => n.data.nodeType === "custom_indicator")
-        .map((n) => {
-          let code = n.data.codeTemplate || n.data.code;
-          let paramOverride = "";
-          if (n.data.customParams) {
-            Object.entries(n.data.customParams).forEach(([key, val]) => {
-              paramOverride += `${key} = ${val}\n`;
-            });
-          }
-          return paramOverride + code;
-        });
-      const standaloneCustom = nodes.find(
-        (n) => n.data.nodeType === "custom" && n.data.label.includes("Yeni Kod")
-      );
-      if (standaloneCustom) {
-        customIndicators.push(standaloneCustom.data.code || userCode);
-      }
-
+      const strategy = getConnectedStrategy();
+      const customIndicators = strategy.customNodes.map((n) => {
+        let code = n.data.codeTemplate || n.data.code;
+        let paramOverride = "";
+        if (n.data.customParams)
+          Object.entries(n.data.customParams).forEach(([key, val]) => {
+            paramOverride += `${key} = ${val}\n`;
+          });
+        return paramOverride + code;
+      });
       const payload = {
         symbol: "BTC/USDT",
         timeframe,
         start_date: startDate,
         end_date: endDate,
+        commission_rate: Number(commission),
         strategy_logic: strategy.logic,
         trade_direction: strategy.direction,
         custom_code: "",
         custom_indicators: customIndicators,
-        rsi_period: Number(strategy.rsiNode?.data?.period || 0),
-        overbought: Number(strategy.rsiNode?.data?.overbought || 70),
-        oversold: Number(strategy.rsiNode?.data?.oversold || 30),
-        entry_operator: strategy.rsiNode?.data?.entryOp || "<",
-        exit_operator: strategy.rsiNode?.data?.exitOp || ">",
-        sma_period: Number(strategy.smaNode?.data?.period || 0),
-        ma_type: strategy.smaNode?.data?.maType || "SMA",
-        macd_fast: Number(strategy.macdNode?.data?.fast || 0),
-        macd_slow: Number(strategy.macdNode?.data?.slow || 26),
-        macd_signal: Number(strategy.macdNode?.data?.signal || 9),
-        bb_period: Number(strategy.bbNode?.data?.period || 0),
-        bb_std: Number(strategy.bbNode?.data?.std || 2),
-        supertrend_period: Number(strategy.stNode?.data?.period || 0),
-        supertrend_multiplier: Number(strategy.stNode?.data?.multiplier || 3),
-        stoch_k: Number(strategy.stochNode?.data?.stoch_k || 0),
-        stoch_d: Number(strategy.stochNode?.data?.stoch_d || 3),
-        stoch_oversold: Number(
-          strategy.stochNode?.data?.stoch_overbought || 20
-        ),
-        stoch_overbought: Number(
-          strategy.stochNode?.data?.stoch_overbought || 80
-        ),
-        stop_loss: Number(strategy.actionNode?.data?.stopLoss || 0),
-        take_profit: Number(strategy.actionNode?.data?.takeProfit || 0),
-      };
-
-      const res = await axios.post(`${API_BASE_URL}/api/backtest`, payload);
-      if (!res.data) throw new Error("Boş veri");
-      setBacktestResult({
-        profit: res.data.profit_percent,
-        trades: res.data.total_trades,
-        final_money: res.data.final_balance,
-        chartData: res.data.chart_data,
-        markers: res.data.markers,
-        customPlots: res.data.custom_plots,
-      });
-    } catch (e) {
-      alert("Hata: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runOptimization = async () => {
-    if (nodes.some((n) => n.data.label.includes("Özel Strateji"))) {
-      alert("Özel Kod modunda optimizasyon henüz desteklenmiyor.");
-      return;
-    }
-    setLoading(true);
-    setOptimizationResult(null);
-    try {
-      let strategy = getActiveStrategies();
-      const payload = {
-        symbol: "BTC/USDT",
-        timeframe,
-        start_date: startDate,
-        end_date: endDate,
-        strategy_logic: strategy.logic,
-        trade_direction: strategy.direction,
-        custom_code: "",
         rsi_period: Number(strategy.rsiNode?.data?.period || 0),
         overbought: Number(strategy.rsiNode?.data?.overbought || 70),
         oversold: Number(strategy.rsiNode?.data?.oversold || 30),
@@ -1512,7 +1311,64 @@ function AlgoBlokApp() {
         stop_loss: Number(strategy.actionNode?.data?.stopLoss || 0),
         take_profit: Number(strategy.actionNode?.data?.takeProfit || 0),
       };
-      const res = await axios.post(`${API_BASE_URL}/api/optimize`, payload);
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/backtest",
+        payload
+      );
+      setBacktestResult(res.data);
+    } catch (e) {
+      alert("Hata: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runOptimization = async () => {
+    if (nodes.some((n) => n.data.label.includes("Özel Strateji"))) {
+      alert("Özel Kod modunda optimizasyon desteklenmiyor.");
+      return;
+    }
+    setLoading(true);
+    setOptimizationResult(null);
+    try {
+      const strategy = getConnectedStrategy();
+      const payload = {
+        symbol: "BTC/USDT",
+        timeframe,
+        start_date: startDate,
+        end_date: endDate,
+        commission_rate: Number(commission),
+        strategy_logic: strategy.logic,
+        trade_direction: strategy.direction,
+        custom_code: "",
+        custom_indicators: [],
+        rsi_period: Number(strategy.rsiNode?.data?.period || 0),
+        overbought: Number(strategy.rsiNode?.data?.overbought || 70),
+        oversold: Number(strategy.rsiNode?.data?.oversold || 30),
+        entry_operator: strategy.rsiNode?.data?.entryOp || "<",
+        exit_operator: strategy.rsiNode?.data?.exitOp || ">",
+        sma_period: Number(strategy.smaNode?.data?.period || 0),
+        ma_type: strategy.smaNode?.data?.maType || "SMA",
+        macd_fast: Number(strategy.macdNode?.data?.fast || 0),
+        macd_slow: Number(strategy.macdNode?.data?.slow || 26),
+        macd_signal: Number(strategy.macdNode?.data?.signal || 9),
+        bb_period: Number(strategy.bbNode?.data?.period || 0),
+        bb_std: Number(strategy.bbNode?.data?.std || 2),
+        supertrend_period: Number(strategy.stNode?.data?.period || 0),
+        supertrend_multiplier: Number(strategy.stNode?.data?.multiplier || 3),
+        stoch_k: Number(strategy.stochNode?.data?.stoch_k || 0),
+        stoch_d: Number(strategy.stochNode?.data?.stoch_d || 3),
+        stoch_oversold: Number(strategy.stochNode?.data?.stoch_oversold || 20),
+        stoch_overbought: Number(
+          strategy.stochNode?.data?.stoch_overbought || 80
+        ),
+        stop_loss: Number(strategy.actionNode?.data?.stopLoss || 0),
+        take_profit: Number(strategy.actionNode?.data?.takeProfit || 0),
+      };
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/optimize",
+        payload
+      );
       setOptimizationResult(res.data);
     } catch (e) {
       alert("Optimizasyon Hatası: " + e.message);
@@ -1538,6 +1394,7 @@ function AlgoBlokApp() {
         overflow: "hidden",
       }}
     >
+      {loading && <LoadingScreen />}
       {backtestResult && (
         <div
           style={{
@@ -1546,15 +1403,24 @@ function AlgoBlokApp() {
             left: "50%",
             transform: "translate(-50%, -50%)",
             background: "#151515",
-            padding: "30px",
+            padding: "20px",
             borderRadius: "10px",
             border: "1px solid #444",
             zIndex: 1000,
-            width: "800px",
+            width: "90%",
+            height: "90%",
+            display: "flex",
+            flexDirection: "column",
             boxShadow: "0 0 50px rgba(0,0,0,0.8)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+          >
             <h2 style={{ margin: 0, color: "white" }}>Sonuçlar</h2>
             <button
               onClick={() => setBacktestResult(null)}
@@ -1569,14 +1435,204 @@ function AlgoBlokApp() {
               X
             </button>
           </div>
-          <div style={{ color: "white", margin: "10px 0" }}>
-            Kar: %{backtestResult.profit} | İşlem: {backtestResult.trades}
+          <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>
+                Başlangıç Bakiye
+              </div>
+              <div
+                style={{ color: "#fff", fontSize: "18px", fontWeight: "bold" }}
+              >
+                $1,000.00
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>Son Bakiye</div>
+              <div
+                style={{
+                  color:
+                    backtestResult.final_balance > 1000 ? "#00ff88" : "#ff4444",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                }}
+              >
+                ${backtestResult.final_balance}
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>Net Kar (%)</div>
+              <div
+                style={{
+                  color:
+                    backtestResult.profit_percent > 0 ? "#00ff88" : "#ff4444",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                }}
+              >
+                %{backtestResult.profit_percent}
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>Brüt Kar</div>
+              <div
+                style={{ color: "#fff", fontSize: "18px", fontWeight: "bold" }}
+              >
+                ${backtestResult.gross_profit}
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>Komisyon</div>
+              <div
+                style={{
+                  color: "#ffaa00",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                }}
+              >
+                -${backtestResult.total_commission}
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#222",
+                padding: "15px",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ color: "#aaa", fontSize: "12px" }}>
+                İşlem Sayısı
+              </div>
+              <div
+                style={{ color: "#fff", fontSize: "18px", fontWeight: "bold" }}
+              >
+                {backtestResult.total_trades}
+              </div>
+            </div>
           </div>
-          <ResultChart
-            data={backtestResult.chartData}
-            markers={backtestResult.markers}
-            customPlots={backtestResult.customPlots}
-          />
+          <div
+            style={{
+              flexGrow: 1,
+              display: "flex",
+              gap: "20px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                flex: 2,
+                border: "1px solid #333",
+                borderRadius: "8px",
+                overflow: "hidden",
+              }}
+            >
+              <ResultChart
+                data={backtestResult.chart_data} // Python'dan 'chart_data' geliyor
+                markers={backtestResult.markers} // Bu doğru (markers)
+                customPlots={backtestResult.custom_plots} // Python'dan 'custom_plots' geliyor
+              />
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#1e1e1e",
+                border: "1px solid #333",
+                borderRadius: "8px",
+                overflowY: "auto",
+                padding: "10px",
+              }}
+            >
+              <h4 style={{ marginTop: 0, color: "#ccc" }}>İşlem Geçmişi</h4>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "12px",
+                  color: "#ddd",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom: "1px solid #444",
+                      textAlign: "left",
+                    }}
+                  >
+                    <th style={{ padding: 5 }}>Zaman</th>
+                    <th style={{ padding: 5 }}>Tür</th>
+                    <th style={{ padding: 5 }}>Fiyat</th>
+                    <th style={{ padding: 5 }}>Kar/Zarar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backtestResult.trades.map((t, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #333" }}>
+                      <td style={{ padding: 5 }}>
+                        {new Date(t.time * 1000).toLocaleDateString()}
+                      </td>
+                      <td
+                        style={{
+                          padding: 5,
+                          color: t.type === "buy" ? "#00ff88" : "#ff4444",
+                        }}
+                      >
+                        {t.type.toUpperCase()}
+                      </td>
+                      <td style={{ padding: 5 }}>{t.price}</td>
+                      <td
+                        style={{
+                          padding: 5,
+                          color:
+                            t.profit > 0
+                              ? "#00ff88"
+                              : t.profit < 0
+                              ? "#ff4444"
+                              : "#ccc",
+                        }}
+                      >
+                        {t.profit ? "$" + t.profit.toFixed(2) : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
       {optimizationResult && (
@@ -1607,7 +1663,6 @@ function AlgoBlokApp() {
           >
             %{optimizationResult.best_profit}
           </div>
-          <p style={{ color: "#ccc", fontSize: "14px" }}>Maksimum Kazanç</p>
           <div
             style={{
               background: "rgba(255,255,255,0.05)",
@@ -1620,15 +1675,6 @@ function AlgoBlokApp() {
             {optimizationResult.best_params &&
             Object.keys(optimizationResult.best_params).length > 0 ? (
               <>
-                <div
-                  style={{
-                    color: "#aaa",
-                    fontSize: "12px",
-                    marginBottom: "5px",
-                  }}
-                >
-                  ÖNERİLEN DEĞİŞİKLİK:
-                </div>
                 {Object.entries(optimizationResult.best_params).map(
                   ([key, val]) => (
                     <div
@@ -1646,9 +1692,7 @@ function AlgoBlokApp() {
                 )}
               </>
             ) : (
-              <div style={{ color: "#aaa", fontStyle: "italic" }}>
-                Mevcut ayarlarınız zaten en iyi sonucu veriyor.
-              </div>
+              <div style={{ color: "#aaa" }}>Mevcut ayarlar en iyisi.</div>
             )}
           </div>
           <div
@@ -1719,9 +1763,6 @@ function AlgoBlokApp() {
           <h4 style={{ margin: 0, color: "#00ff88", fontSize: "18px" }}>
             AlgoBlok Pro
           </h4>
-          <div
-            style={{ height: "25px", width: "1px", background: "#444" }}
-          ></div>
           <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
             <select
               value={timeframe}
@@ -1744,7 +1785,6 @@ function AlgoBlokApp() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
               style={{
                 background: "#222",
                 color: "white",
@@ -1759,7 +1799,6 @@ function AlgoBlokApp() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
               style={{
                 background: "#222",
                 color: "white",
@@ -1769,10 +1808,32 @@ function AlgoBlokApp() {
                 fontSize: "13px",
               }}
             />
+            <div
+              style={{
+                marginLeft: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span style={{ fontSize: 12, color: "#aaa" }}>Komisyon:</span>
+              <input
+                type="number"
+                step="0.0001"
+                value={commission}
+                onChange={(e) => setCommission(e.target.value)}
+                style={{
+                  width: 60,
+                  background: "#222",
+                  color: "white",
+                  border: "1px solid #444",
+                  padding: "5px",
+                  borderRadius: "4px",
+                  fontSize: "13px",
+                }}
+              />
+            </div>
           </div>
-          <div
-            style={{ height: "25px", width: "1px", background: "#444" }}
-          ></div>
           <div style={{ display: "flex", gap: "5px" }}>
             <button
               onClick={saveStrategy}
@@ -1784,9 +1845,6 @@ function AlgoBlokApp() {
                 borderRadius: "4px",
                 cursor: "pointer",
                 fontSize: "13px",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
               }}
             >
               💾 Kaydet
@@ -1862,7 +1920,6 @@ function AlgoBlokApp() {
                 cursor: loading ? "not-allowed" : "pointer",
                 fontWeight: "bold",
                 fontSize: "13px",
-                boxShadow: "0 0 10px rgba(255, 0, 204, 0.3)",
               }}
             >
               {loading ? "..." : "✨ AI Optimize Et"}
@@ -1888,7 +1945,6 @@ function AlgoBlokApp() {
           </button>
         </div>
       </div>
-
       <div
         style={{ display: "flex", flexGrow: 1, overflow: "hidden" }}
         onClick={onPaneClick}
@@ -1900,7 +1956,6 @@ function AlgoBlokApp() {
           onRenameScript={handleRenameScript}
           onDeleteScript={onDeleteScript}
         />
-
         <div
           style={{ flexGrow: 1, position: "relative" }}
           ref={reactFlowWrapper}
@@ -1926,7 +1981,6 @@ function AlgoBlokApp() {
             {tooltip && <Tooltip data={tooltip.text} position={tooltip} />}
           </ReactFlow>
         </div>
-
         <div
           style={{
             width: 350,
@@ -1949,7 +2003,9 @@ function AlgoBlokApp() {
               alignItems: "center",
             }}
           >
-            <span>{isCustomMode ? "📜 Kod Editörü" : "🤖 Otomatik Kod"}</span>
+            <span>
+              {isCustomMode ? "📜 AlgoScript Editörü" : "🤖 Otomatik Kod"}
+            </span>
             {isCustomMode && (
               <div style={{ display: "flex", gap: "5px" }}>
                 <button
@@ -1979,7 +2035,6 @@ function AlgoBlokApp() {
                     borderRadius: "3px",
                     fontWeight: "bold",
                   }}
-                  title="Kod içindeki varsayılan değerleri bloğa zorla yazar."
                 >
                   ↻ Koddan Resetle
                 </button>
