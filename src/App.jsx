@@ -1860,11 +1860,11 @@ if r > (100 - esik_deger):
               }}
             >
               <option value="">📂 Yükle...</option>
-              {savedStrategies.map((s) => (
-                <option key={s.id} value={JSON.stringify(s)}>
-                  {s.name}
-                </option>
-              ))}
+              {savedStrategies?.map((s) => (  // Soru işareti (?) ekledik
+  <option key={s.id} value={JSON.stringify(s)}>
+    {s.name}
+  </option>
+))}
             </select>
             <select
               onChange={(e) => {
@@ -1881,11 +1881,11 @@ if r > (100 - esik_deger):
               }}
             >
               <option value="">🗑️ Sil...</option>
-              {savedStrategies.map((s) => (
-                <option key={s.id} value={JSON.stringify(s)}>
-                  {s.name}
-                </option>
-              ))}
+              {savedStrategies?.map((s) => (  // Soru işareti (?) ekledik
+  <option key={s.id} value={JSON.stringify(s)}>
+    {s.name}
+  </option>
+))}
             </select>
           </div>
         </div>
